@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<web-app xmlns="http://java.sun.com/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+         version="2.5">
+ <servlet>
+    <servlet-name>HelloAppEngine</servlet-name>
+    <servlet-class>com.firstprogram.HelloAppEngine</servlet-class>
+ </servlet>
+  
+  <servlet-mapping>
+    <servlet-name>HelloAppEngine</servlet-name>
+    <url-pattern>/hello</url-pattern>
+  </servlet-mapping>
+ 
+ <servlet>
+    <servlet-name>ForDataStore</servlet-name>
+    <servlet-class>com.datastore.DataStoreProgram</servlet-class>
+ </servlet>
+  
+  <servlet-mapping>
+    <servlet-name>ForDataStore</servlet-name>
+    <url-pattern>/datastore</url-pattern>
+  </servlet-mapping>
+  
+ <servlet>
+    <servlet-name>ForJCache</servlet-name>
+    <servlet-class>com.memcache.Jcache</servlet-class>
+ </servlet>
+  
+ <servlet-mapping>
+   <servlet-name>ForJCache</servlet-name>
+   <url-pattern>/jcache</url-pattern>
+ </servlet-mapping>
+ 
+ <servlet>
+    <servlet-name>ForLowLevelAPI</servlet-name>
+    <servlet-class>com.memcache.Memcache</servlet-class>
+ </servlet>
+  
+ <servlet-mapping>
+   <servlet-name>ForLowLevelAPI</servlet-name>
+   <url-pattern>/memcache</url-pattern>
+ </servlet-mapping>
+ 
+ <servlet>
+    <servlet-name>ForAsyncLowLevelAPI</servlet-name>
+    <servlet-class>com.memcache.AsyncMemcache</servlet-class>
+ </servlet>
+  
+ <servlet-mapping>
+   <servlet-name>ForAsyncLowLevelAPI</servlet-name>
+   <url-pattern>/asyncMemcache</url-pattern>
+ </servlet-mapping> 
+ 
+ <servlet>
+    <servlet-name>ForNameSpace</servlet-name>
+    <servlet-class>com.memcache.NameSpaceSample</servlet-class>
+ </servlet>
+  
+ <servlet-mapping>
+   <servlet-name>ForNameSpace</servlet-name>
+   <url-pattern>/namespace</url-pattern>
+ </servlet-mapping>
+ 
+ <servlet>
+    <servlet-name>ForTaskQueue</servlet-name>
+    <servlet-class>com.PushQueue.Enqueue</servlet-class>
+ </servlet>
+  
+ <servlet-mapping>
+   <servlet-name>ForTaskQueue</servlet-name>
+   <url-pattern>/enqueue</url-pattern>
+ </servlet-mapping>
+ 
+ <servlet>
+    <servlet-name>ForTaskQueueWorker</servlet-name>
+    <servlet-class>com.PushQueue.Worker</servlet-class>
+ </servlet>
+  
+ <servlet-mapping>
+   <servlet-name>ForTaskQueueWorker</servlet-name>
+   <url-pattern>/worker</url-pattern>
+ </servlet-mapping>
+  
+ <servlet>
+    <servlet-name>ForDeferredTask</servlet-name>
+    <servlet-class>com.PushQueue.DeferSampleServlet</servlet-class>
+ </servlet>
+  
+ <servlet-mapping>
+   <servlet-name>ForDeferredTask</servlet-name>
+   <url-pattern>/deferredtask</url-pattern>
+ </servlet-mapping>
+  
+ <servlet>
+    <servlet-name>GCS</servlet-name>
+    <servlet-class>com.gcs.CloudStorage</servlet-class>
+ </servlet>
+  
+  <servlet-mapping>
+    <servlet-name>GCS</servlet-name>
+    <url-pattern>/gcs</url-pattern>
+  </servlet-mapping>
+ 
+ <servlet>
+    <servlet-name>SQL</servlet-name>
+    <servlet-class>com.sql.SampleProgram</servlet-class>
+ </servlet>
+  
+  <servlet-mapping>
+    <servlet-name>SQL</servlet-name>
+    <url-pattern>/sql</url-pattern>
+  </servlet-mapping>
+ 
+  <welcome-file-list>
+    <welcome-file>index.html</welcome-file>
+    <welcome-file>index.jsp</welcome-file>
+  </welcome-file-list>
+
+</web-app>

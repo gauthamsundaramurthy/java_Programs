@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+  
+ <queue-entries>
+  <queue>
+    <name>test-queue</name>
+    <rate>20/s</rate>
+    <bucket-size>40</bucket-size>
+    <max-concurrent-requests>10</max-concurrent-requests>
+  </queue>
+  
+  <queue>
+    <name>pull-queue</name>
+    <mode>pull</mode>
+  </queue>
+
+</queue-entries>
+
+  
