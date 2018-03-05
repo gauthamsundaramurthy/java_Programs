@@ -4,7 +4,6 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -14,7 +13,6 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Calendar;
 import java.util.Date;
 
 import com.model.Employee;
@@ -117,7 +115,6 @@ public class ScheduleHandler {
 	
 	public boolean isOrganiser(Connection conn, String empIdOfManager)
 	{
-		System.out.println("checking " + empIdOfManager);
 		boolean isEligible = false;
 		try {
 			Statement stmt = conn.createStatement();
@@ -153,7 +150,6 @@ public class ScheduleHandler {
 		if( isOrganiser(conn,meeting.getOrganiser()) )
 		{
 			UTCTime utcTime = convertToUTC(meeting);
-			System.out.println("first check" + utcTime.getStartDate());
 			
 			String timeDiff = timeDifference(utcTime.getStartDate(),utcTime.getStartTime(),utcTime.getEndDate(),utcTime.getEndTime());
 			
@@ -178,20 +174,17 @@ public class ScheduleHandler {
 								Statement stmt = conn.createStatement();
 								stmt.executeUpdate("INSERT INTO employeeSchedule(empId,meetingId) VALUE ('"+ meeting.getOrganiser() +"','"+ meetingId + "')");
 								
-								
 								// insert employee meeting schedule
 								for(String empId : meeting.getGuest())
 								{
 									stmt = conn.createStatement();
 									stmt.executeUpdate("INSERT INTO employeeSchedule(empId,meetingId) VALUE ('"+ empId +"','"+ meetingId + "')");
-									
 									this.status = "Appointment is scheduled successfully"; 
 								}
 							}
 						}
 						if(meeting.getRepeatMode().equals("weekly"))
 						{
-							System.out.println("final check start date is : " + utcTime.getStartDate());
 							int count = 1;
 							while(count<=4)
 							{
@@ -207,7 +200,6 @@ public class ScheduleHandler {
 									{
 										stmt = conn.createStatement();
 										stmt.executeUpdate("INSERT INTO employeeSchedule(empId,meetingId) VALUE ('"+ empId +"','"+ meetingId + "')");
-										
 										this.status = "Appointment is scheduled successfully"; 
 									}
 								}
@@ -221,8 +213,7 @@ public class ScheduleHandler {
 								count++;
 							}
 						}
-						
-							
+			
 					} catch (SQLException e) {
 						this.statusCode = 500;
 						this.status = "Exception thrown while accessing database";
@@ -230,78 +221,57 @@ public class ScheduleHandler {
 					}
 				}
 			}
-			
 		}
 		
 		respObj.setResponse(this.statusCode, this.status);
 	}
-		
 
 	public void checkAppointmentCollision(Connection conn,MeetingInfo meeting,UTCTime utcTime)
-	{
-		
-		ResultSet rs = null;
+	{	
+		ResultSet resultset = null;
 		
 		try {
 			
-			// check organiser's meeting schedule
+			String employeeIds = "'" + meeting.getOrganiser() + "'";
+			for(String empId: meeting.getGuest())
+			{
+				employeeIds = employeeIds + ",'" + empId + "'"; 
+			}
 			
 			Statement stmt = conn.createStatement();
-			rs = stmt.executeQuery("SELECT * FROM employeeSchedule where empId = '" + meeting.getOrganiser() +"'");
-			if(rs.next())
+			resultset = stmt.executeQuery("SELECT * from employeeSchedule INNER JOIN meetingInfo ON employeeSchedule.meetingId = meetingInfo.meetingId where employeeSchedule.empId  IN (" + employeeIds + ")" );
+			if(resultset.next())
 			{
-				rs.beforeFirst();
-				while(rs.next())
+				resultset.beforeFirst();
+				while(resultset.next())
 				{
 					if(meeting.getRepeatMode().equals("none") )
 					{
-						checkOtherAppointments(conn,rs.getInt("meetingId"),utcTime); 
+						checkForDateCollision(utcTime,resultset.getString("startDate"),resultset.getString("startTime"),resultset.getString("endDate"),resultset.getString("endTime") );
 					}
 					if(meeting.getRepeatMode().equals("weekly") )
 					{
-						System.out.println("-----------------------------------------------------");
-						
 						int count = 1;
 						while(count<=3)
 						{
-							checkOtherAppointments(conn,rs.getInt("meetingId"),utcTime); 
+							checkForDateCollision(utcTime,resultset.getString("startDate"),resultset.getString("startTime"),resultset.getString("endDate"),resultset.getString("endTime") );
 							processDate.addDate(utcTime,meeting.getRepeatMode() );
 							count++;
 						}
-						checkOtherAppointments(conn,rs.getInt("meetingId"),utcTime); 
+						checkForDateCollision(utcTime,resultset.getString("startDate"),resultset.getString("startTime"),resultset.getString("endDate"),resultset.getString("endTime") );
 						count=1;
 						while(count<=3)
 						{
 							processDate.minusDate(utcTime,meeting.getRepeatMode() );
+							count++;
 						}
-						//System.out.println("before adding :" + utcTime.getStartDate());
-						//System.out.println("after adding :" + utcTime.getStartDate());
-						//System.out.println("after minus :" + utcTime.getStartDate());
 					}
+						
 				}
 			}
 			
-			// check employee's meeting schedule
-			for(String empId : meeting.getGuest())
-			{
-				stmt = conn.createStatement();
-				rs = stmt.executeQuery("SELECT * FROM employeeSchedule where empId = '" + empId +"'");
-				if(rs.next())
-				{
-					rs.beforeFirst();
-					while(rs.next())
-					{
-						if(meeting.getRepeatMode().equals("none") )
-						{
-							checkOtherAppointments(conn,rs.getInt("meetingId"),utcTime); 
-						}
-						if(meeting.getRepeatMode().equals("weekly") )
-						{
-							checkOtherAppointments(conn,rs.getInt("meetingId"),utcTime); 
-						}
-					}
-				}
-			}
+					System.out.println("waiting for result. ");
+			
 		} catch (SQLException e) {
 			this.statusCode = 500;
 			this.status = "Exception thrown while accessing database";
@@ -310,31 +280,6 @@ public class ScheduleHandler {
 		
 	}
 	
-	public void checkOtherAppointments(Connection conn,int meetingId,UTCTime utcTime)
-	{
-		ResultSet rs =null;
-		
-		try {
-			Statement stmt = conn.createStatement();
-			rs = stmt.executeQuery("SELECT * FROM meetingInfo where meetingId = '" + meetingId +"'");
-			if(rs.next())
-			{
-				rs.beforeFirst();
-				while(rs.next())
-				{
-					checkForDateCollision(utcTime,rs.getString("startDate"),rs.getString("startTime"),rs.getString("endDate"),rs.getString("endTime") ); 
-				}
-			}
-			else
-			{
-				this.status = "available";
-			}
-		} catch (SQLException e) {
-			this.statusCode = 500;
-			this.status = "Exception thrown while accessing database";
-			e.printStackTrace();
-		}
-	}
 	
 	public void checkForDateCollision(UTCTime utcTime, String startDate, String startTime, String endDate, String endTime)
 	{
@@ -348,24 +293,22 @@ public class ScheduleHandler {
 			endDateFromDB = sdf.parse(endDate);
 			
 			String conflictDate = "both";
-			System.out.println(".................");
+			//System.out.println(".................");
 	        if ( (meetingStartDate.compareTo(endDateFromDB) > 0) || (meetingEndDate.compareTo(startDateFromDB) < 0)) {
-	        	System.out.println("slot is free to book");
+	        	//System.out.println("slot is free to book");
 	        } 
 	        else if ( ( (meetingStartDate.compareTo(startDateFromDB) > 0) && (meetingStartDate.compareTo(endDateFromDB) < 0)) || ( (meetingEndDate.compareTo(startDateFromDB) > 0) && (meetingEndDate.compareTo(endDateFromDB) < 0)) ) {
 	            this.status = "Appointment cannot be scheduled";
-	        	System.out.println("not available -partial");
 	        }
 	        else if((meetingStartDate.compareTo(startDateFromDB) < 0) && (meetingEndDate.compareTo(endDateFromDB) > 0) )
 	        {	this.status ="Appointment cannot be scheduled";
-	        	System.out.println("not available");
 	        }
 	        else if ( (meetingStartDate.compareTo(startDateFromDB) == 0) && (meetingEndDate.compareTo(endDateFromDB) == 0) ) {
-	            System.out.println("may collide because of same date");
+	            //System.out.println("may collide because of same date");
 	            checkForTimeCollision(conflictDate,utcTime,startDate,startTime,endDate,endTime);
 	        }
 	        else if ( (meetingStartDate.compareTo(startDateFromDB) == 0) || (meetingStartDate.compareTo(endDateFromDB) == 0)  ) {
-	            System.out.println("may collide because of start date");
+	            //System.out.println("may collide because of start date");
 	        	conflictDate = "meetingStartDate";
 	            checkForTimeCollision(conflictDate,utcTime,startDate,startTime,endDate,endTime);
 	        }
@@ -374,11 +317,11 @@ public class ScheduleHandler {
 	        	conflictDate = "meetingEndDate";
 	            checkForTimeCollision(conflictDate,utcTime,startDate,startTime,endDate,endTime);
 	        
-	        	System.out.println("may collide because of end date");
+	        	//System.out.println("may collide because of end date");
 	        }
 	        else {
 	        	this.status = "Appointment cannot be scheduled";
-	        	System.out.println("logic error");
+	        	//System.out.println("logic error");
 	        } 
 	        
 		} catch (ParseException e) {
@@ -396,36 +339,29 @@ public class ScheduleHandler {
 				timeDiff = timeDifference(utcTime.getEndDate(),utcTime.getEndTime(),startDate,startTime);
 				if (timeDiff.equals("lesser") || timeDiff.equals("equal"))
 				{
-					System.out.println("yes, slot is free....");
+					//System.out.println("yes, slot is free....");
 				}
 				else
 				{
 					this.status = "Appointment cannot be scheduled";
-					System.out.println("no, slot is not available.... ");
+					//System.out.println("no, slot is not available.... ");
 				}
-				//System.out.println("check for end");
 			}
 			else if(conflictDate.equals("meetingStartDate"))
 			{
 				timeDiff = timeDifference(endDate,endTime,utcTime.getStartDate(),utcTime.getStartTime());
 				if (timeDiff.equals("lesser") || timeDiff.equals("equal"))
 				{
-					System.out.println("yes, slot is free....");
+					//System.out.println("yes, slot is free....");
 				}
 				else 
 				{
 					this.status="Appointment cannot be scheduled";
-					System.out.println("no, slot is not available.... ");
+					//System.out.println("no, slot is not available.... ");
 				}
-				//System.out.println("check for start");
 			}
 			else
 			{
-				
-				System.out.println("meeting start time: " + utcTime.getStartTime());
-				System.out.println("db start time: " + startTime);
-				System.out.println("meeting end time: " + utcTime.getEndTime());
-				System.out.println("db end time: " + endTime);
 				
 				timeDiff = timeDifference(utcTime.getStartDate(),utcTime.getEndTime(),startDate,startTime);
 				String timeDiff1 = timeDifference(startDate,endTime,utcTime.getStartDate(),utcTime.getStartTime());
@@ -433,25 +369,25 @@ public class ScheduleHandler {
 				
 				if(timeDiff.equals("equal") || timeDiff.equals("lesser"))
 				{
-					System.out.println("yes, slot is available");
+					//System.out.println("yes, slot is available");
 				}
 				else if (timeDiff1.equals("equal") || timeDiff1.equals("lesser"))
 				{
-					System.out.println("yes, slot is available");
+					//System.out.println("yes, slot is available");
 				}
 				else
 				{
 					this.status="Appointment cannot be scheduled";
-					System.out.println("no, slot is not available");
+					//System.out.println("no, slot is not available");
 				}
 				
 			}
 	}
 	
-	public String timeDifference(String dateFromDB,String timeFromDB, String meetingDate, String meetingTime)
+	public String timeDifference(String date1,String time1, String date2, String time2)
 	{
-		String startTimeStr = dateFromDB + " " + timeFromDB;
-		String endTimeStr = meetingDate + " " + meetingTime;
+		String startTimeStr = date1 + " " + time1;
+		String endTimeStr = date2 + " " + time2;
 		String status;
 		DateTimeFormatter formatter = DateTimeFormatter
 				.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -461,22 +397,21 @@ public class ScheduleHandler {
 		LocalDateTime eTime = LocalDateTime.parse(endTimeStr, formatter);
 		
 		Duration duration = Duration.between(sTime, eTime);
-		//System.out.println("duration is :" + duration.getSeconds());
 		
 		if (duration.getSeconds() == 0)
 		{
 			status="equal";
-		    System.out.println("\n Both Start time and End Time are equal");
+		   // System.out.println("\n Both Start time and End Time are equal");
 		}
 		else if (duration.getSeconds() > 0)
 		{
 			status = "lesser";
-			System.out.println("\n" +timeFromDB + " is less than " + meetingTime);
+			//System.out.println("\n" + time1 + " is less than " + time2);
 		}
 		else
 		{
 			status = "greater";
-			System.out.println("\n" + timeFromDB + " is greater than " + meetingTime);
+			//System.out.println("\n" + time1 + " is greater than " + time2);
 		}	
 		return status;
 	}

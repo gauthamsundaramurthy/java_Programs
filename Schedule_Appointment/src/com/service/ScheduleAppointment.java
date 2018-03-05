@@ -3,18 +3,14 @@ package com.service;
 
 import javax.ws.rs.Path;
 
-import java.sql.Statement;
 import java.sql.Connection;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 
 import com.model.Connector;
 import com.model.Employee;
