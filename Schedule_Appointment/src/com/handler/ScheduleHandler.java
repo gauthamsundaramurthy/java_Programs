@@ -42,7 +42,7 @@ public class ScheduleHandler {
 	
 	public UTCTime convertToUTC(MeetingInfo meeting)
 	{
-	   String date,month,hour,minute,second, startDate,startTime, endDate, endTime;	
+	   String date,month,hour,minute,second, startDate,startTime, endDate, endTime, periodEndDate;	
 	   LocalDateTime localtDateAndTime;
 	   ZonedDateTime dateAndTime;
 		
@@ -84,8 +84,22 @@ public class ScheduleHandler {
 	   endDate = endDateAndTime.getYear()+"-"+month+"-"+date;
 	   endTime = hour+":"+minute+":"+second;
 	 	  
-       UTCTime utc = new UTCTime(startDate,startTime,endDate,endTime); 
+	   //period from & to 
+	   string = meeting.getPeriodTo() + " " + meeting.getEndTime();
+	   localtDateAndTime = LocalDateTime.parse(string, formatters);
+	   dateAndTime = ZonedDateTime.of(localtDateAndTime, zoneId );
 	   
+	   ZonedDateTime periodEnd = dateAndTime.withZoneSameInstant(ZoneOffset.UTC);
+	   month = (periodEnd.getMonthValue() < 10 ? "0" : "") + periodEnd.getMonthValue();
+	   date = (periodEnd.getDayOfMonth() < 10 ? "0" : "") + periodEnd.getDayOfMonth();
+	   
+	   periodEndDate = periodEnd.getYear()+"-"+month+"-"+date;
+	   
+	   System.out.println("period end : " + periodEndDate);
+	   
+       UTCTime utc = new UTCTime(startDate,startTime,endDate,endTime,periodEndDate); 
+	   
+       
 	  return utc;
 	}
 	
@@ -156,53 +170,43 @@ public class ScheduleHandler {
 			}
 			if(meeting.getRepeatMode().equals("weekly") )
 			{
-				int count = 1;
-				while(count<=3)
+				boolean count= true;
+				while(count)
 				{
 					stmt.executeUpdate("INSERT INTO requestedAppointment(startDate,startTime,endDate,endTime) VALUE ('"+utcTime.getStartDate()+"','"+utcTime.getStartTime()+"','"+utcTime.getEndDate()+"','"+ utcTime.getEndTime()+"')");
 					processDate.addDate(utcTime,meeting.getRepeatMode() );
-					count++;
-				}
-				stmt.executeUpdate("INSERT INTO requestedAppointment(startDate,startTime,endDate,endTime) VALUE ('"+utcTime.getStartDate()+"','"+utcTime.getStartTime()+"','"+utcTime.getEndDate()+"','"+ utcTime.getEndTime()+"')");
-				count=1;
-				while(count<=3)
-				{
-					processDate.minusDate(utcTime,meeting.getRepeatMode() );
-					count++;
+					String timeDiff = timeDifference(utcTime.getPeriodTo(),utcTime.getEndTime(),utcTime.getEndDate(),utcTime.getEndTime());
+					if (timeDiff.equals("lesser"))
+					{
+						count = false;
+					}
 				}
 			}
 			if(meeting.getRepeatMode().equals("daily"))
 			{
-				int count= 1;
-				while(count<=6)
+				boolean count= true;
+				while(count)
 				{
 					stmt.executeUpdate("INSERT INTO requestedAppointment(startDate,startTime,endDate,endTime) VALUE ('"+utcTime.getStartDate()+"','"+utcTime.getStartTime()+"','"+utcTime.getEndDate()+"','"+ utcTime.getEndTime()+"')");
 					processDate.addDate(utcTime,meeting.getRepeatMode() );
-					count++;
+					if (timeDifference(utcTime.getPeriodTo(),utcTime.getEndTime(),utcTime.getEndDate(),utcTime.getEndTime()).equals("lesser") )
+					{
+						count = false;
+					}
 				}
-				stmt.executeUpdate("INSERT INTO requestedAppointment(startDate,startTime,endDate,endTime) VALUE ('"+utcTime.getStartDate()+"','"+utcTime.getStartTime()+"','"+utcTime.getEndDate()+"','"+ utcTime.getEndTime()+"')");
-				count=1;
-				while(count<=6)
-				{
-					processDate.minusDate(utcTime,meeting.getRepeatMode() );
-					count++;
-				}
+				
 			}
 			if(meeting.getRepeatMode().equals("monthly") )
 			{
-				int count = 1;
-				while(count<=11)
+				boolean count= true;
+				while(count)
 				{
 					stmt.executeUpdate("INSERT INTO requestedAppointment(startDate,startTime,endDate,endTime) VALUE ('"+utcTime.getStartDate()+"','"+utcTime.getStartTime()+"','"+utcTime.getEndDate()+"','"+ utcTime.getEndTime()+"')");
 					processDate.addDate(utcTime,meeting.getRepeatMode() );
-					count++;
-				}
-				stmt.executeUpdate("INSERT INTO requestedAppointment(startDate,startTime,endDate,endTime) VALUE ('"+utcTime.getStartDate()+"','"+utcTime.getStartTime()+"','"+utcTime.getEndDate()+"','"+ utcTime.getEndTime()+"')");
-				count=1;
-				while(count<=11)
-				{
-					processDate.minusDate(utcTime,meeting.getRepeatMode() );
-					count++;
+					if (timeDifference(utcTime.getPeriodTo(),utcTime.getEndTime(),utcTime.getEndDate(),utcTime.getEndTime()).equals("lesser") )
+					{
+						count = false;
+					}
 				}
 			}
 			
@@ -220,15 +224,16 @@ public class ScheduleHandler {
 			UTCTime utcTime = convertToUTC(meeting);
 			
 			String timeDiff = timeDifference(utcTime.getStartDate(),utcTime.getStartTime(),utcTime.getEndDate(),utcTime.getEndTime());
-			
 			if(timeDiff.equals("greater"))
 			{
 				this.statusCode = 400;
 				this.status = "start time is greater than end Time";
 			}
 			else
-			{
+			{	
 				requestedBooking(conn,meeting,utcTime);
+				UTCTime utc = convertToUTC(meeting);
+				
 				ResultSet resultset = checkAppointmentCollision(conn,meeting,utcTime);
 				
 				try {
@@ -244,34 +249,16 @@ public class ScheduleHandler {
 					}
 					else
 					{
-						System.out.println("Appointment available....");
 						try {
-							if(meeting.getRepeatMode().equals("none"))
+							
+							if(meeting.getRepeatMode().equals("none") || meeting.getRepeatMode().equals("daily") || meeting.getRepeatMode().equals("weekly") || meeting.getRepeatMode().equals("monthly"))
 							{
-								int meetingId = insertMeetingData(conn,meeting,utcTime);
-								if (meetingId!=0)
-								{  
-									// insert organizer meeting schedule
-									Statement stmt = conn.createStatement();
-									stmt.executeUpdate("INSERT INTO employeeSchedule(empId,meetingId) VALUE ('"+ meeting.getOrganiser() +"','"+ meetingId + "')");
-									
-									// insert employee meeting schedule
-									for(String empId : meeting.getGuest())
+								boolean count= true;
+								while(count)
+								{
+									int meetingId = insertMeetingData(conn,meeting,utc);
+									if (meetingId!=0)
 									{
-										stmt = conn.createStatement();
-										stmt.executeUpdate("INSERT INTO employeeSchedule(empId,meetingId) VALUE ('"+ empId +"','"+ meetingId + "')");
-										this.status = "Appointment is scheduled successfully"; 
-									}
-								}
-							}
-							if(meeting.getRepeatMode().equals("weekly"))
-							{
-								int count = 1;
-								while(count<=4)
-								{
-									int meetingId = insertMeetingData(conn,meeting,utcTime);
-									if (meetingId!=0)
-									{  
 										// insert organizer meeting schedule
 										Statement stmt = conn.createStatement();
 										stmt.executeUpdate("INSERT INTO employeeSchedule(empId,meetingId) VALUE ('"+ meeting.getOrganiser() +"','"+ meetingId + "')");
@@ -284,77 +271,24 @@ public class ScheduleHandler {
 											this.status = "Appointment is scheduled successfully"; 
 										}
 									}
-									processDate.addDate(utcTime,meeting.getRepeatMode() );
-									count++;
-								}
-								count=1;
-								while(count<=3)
-								{
-									processDate.minusDate(utcTime,meeting.getRepeatMode() );
-									count++;
-								}
-							}
-							if(meeting.getRepeatMode().equals("daily"))
-							{
-								int count = 1;
-								while(count<=7)
-								{
-									int meetingId = insertMeetingData(conn,meeting,utcTime);
-									if (meetingId!=0)
-									{  
-										// insert organizer meeting schedule
-										Statement stmt = conn.createStatement();
-										stmt.executeUpdate("INSERT INTO employeeSchedule(empId,meetingId) VALUE ('"+ meeting.getOrganiser() +"','"+ meetingId + "')");
+									if(meeting.getRepeatMode().equals("none"))
+									{
+										count = false;
+									}
+									else
+									{
+										processDate.addDate(utc,meeting.getRepeatMode() );
 										
-										//insert employee meeting schedule
-										for(String empId : meeting.getGuest())
+										timeDiff = timeDifference(utc.getPeriodTo(),utc.getEndTime(),utc.getEndDate(),utc.getEndTime());
+										if (timeDiff.equals("lesser"))
 										{
-											stmt = conn.createStatement();
-											stmt.executeUpdate("INSERT INTO employeeSchedule(empId,meetingId) VALUE ('"+ empId +"','"+ meetingId + "')");
-											this.status = "Appointment is scheduled successfully"; 
+											count = false;
 										}
 									}
-									processDate.addDate(utcTime,meeting.getRepeatMode() );
-									count++;
+								
 								}
-								count=1;
-								while(count<=6)
-								{
-									processDate.minusDate(utcTime,meeting.getRepeatMode() );
-									count++;
-								}
+								
 							}
-							if(meeting.getRepeatMode().equals("monthly"))
-							{
-								int count = 1;
-								while(count<=12)
-								{
-									int meetingId = insertMeetingData(conn,meeting,utcTime);
-									if (meetingId!=0)
-									{  
-										// insert organizer meeting schedule
-										Statement stmt = conn.createStatement();
-										stmt.executeUpdate("INSERT INTO employeeSchedule(empId,meetingId) VALUE ('"+ meeting.getOrganiser() +"','"+ meetingId + "')");
-										
-										//insert employee meeting schedule
-										for(String empId : meeting.getGuest())
-										{
-											stmt = conn.createStatement();
-											stmt.executeUpdate("INSERT INTO employeeSchedule(empId,meetingId) VALUE ('"+ empId +"','"+ meetingId + "')");
-											this.status = "Appointment is scheduled successfully"; 
-										}
-									}
-									processDate.addDate(utcTime,meeting.getRepeatMode() );
-									count++;
-								}
-								count=1;
-								while(count<=11)
-								{
-									processDate.minusDate(utcTime,meeting.getRepeatMode() );
-									count++;
-								}
-							}
-				
 						} catch (SQLException e) {
 							this.statusCode = 500;
 							this.status = "Exception thrown while accessing database";

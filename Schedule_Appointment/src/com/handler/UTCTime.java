@@ -5,17 +5,19 @@ public class UTCTime {
 	private String startTime;
 	private String endDate;
 	private String endTime;
+	private String periodTo;
 	
 	public UTCTime()
 	{
 	}
 
-	public UTCTime(String startDate, String startTime, String endDate, String endTime)
+	public UTCTime(String startDate, String startTime, String endDate, String endTime, String periodTo)
 	{
 		this.startDate = startDate;
 		this.startTime = startTime;
 		this.endDate = endDate;
 		this.endTime = endTime;
+		this.periodTo = periodTo;
 	}
 
 	public String getStartDate() {
@@ -46,6 +48,15 @@ public class UTCTime {
 		this.endTime = endTime;
 	}
 	
+	
+	public String getPeriodTo() {
+		return periodTo;
+	}
+
+	public void setPeriodTo(String periodTo) {
+		this.periodTo = periodTo;
+	}
+
 	public void setDateTime(String startDate, String startTime, String endDate, String endTime)
 	{
 		

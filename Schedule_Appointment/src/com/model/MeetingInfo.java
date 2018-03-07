@@ -6,6 +6,8 @@ public class MeetingInfo {
 
 	private String name;
 	private String description;
+	private String periodFrom;
+	private String periodTo;
 	private String startDate;
 	private String startTime;
 	private String endDate;
@@ -83,5 +85,19 @@ public class MeetingInfo {
 	public void setRepeatMode(String repeatMode) {
 		this.repeatMode = repeatMode.toLowerCase().trim();
 	}
+	public String getPeriodFrom() {
+		return periodFrom;
+	}
+	public void setPeriodFrom(String periodFrom) {
+		this.periodFrom = periodFrom;
+	}
+	
+	public String getPeriodTo() {
+		return periodTo;
+	}
+	public void setPeriodTo(String periodTo) {
+		this.periodTo = periodTo;
+	}
+	
 	
 }
