@@ -30,6 +30,11 @@ public class DateProcess {
 	        	c.add(Calendar.DATE, 7); 
 	        	c1.add(Calendar.DATE, 7);
 	        }
+	        if(repeatMode.equals("daily"))
+	        {
+	        	c.add(Calendar.DATE, 1); 
+	        	c1.add(Calendar.DATE, 1);
+	        }
 	        if(repeatMode.equals("monthly"))
 	        {
 	        	c.add(Calendar.MONTH,1);
@@ -62,10 +67,15 @@ public class DateProcess {
 		    c1.setTime(meetingEndDate);
 		    
 		    // manipulate date
-	        if(repeatMode.equals("weekly"))
+		    if(repeatMode.equals("weekly"))
 	        {
 	        	c.add(Calendar.DATE, -7); 
 	        	c1.add(Calendar.DATE, -7);
+	        } 
+		    if(repeatMode.equals("daily"))
+	        {
+	        	c.add(Calendar.DATE, -1); 
+	        	c1.add(Calendar.DATE, -1);
 	        }
 	        if(repeatMode.equals("monthly"))
 	        {

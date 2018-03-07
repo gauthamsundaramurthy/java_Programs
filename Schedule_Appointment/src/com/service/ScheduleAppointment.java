@@ -67,7 +67,7 @@ public class ScheduleAppointment {
 			ScheduleHandler handler = new ScheduleHandler();
 			handler.appointmentScheduler(conn,respObj,meeting);
 		}
-		return respObj.generateStringResponse();
+		return respObj.generateScheduleResponse();
 	}
 	
 }
